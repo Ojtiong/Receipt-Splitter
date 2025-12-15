@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Receipt Splitter — Sam's Club</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:28px;max-width:900px}
+    header{display:flex;gap:16px;align-items:center}
+    h1{margin:0}
+    pre{background:#f6f8fa;padding:12px;border-radius:6px;overflow:auto}
+    .btn{display:inline-block;padding:8px 12px;border-radius:6px;background:#0366d6;color:white;text-decoration:none}
+  </style>
+</head>
+<body>
+  <header>
+    <img src="assets/icon128.png" width="64" height="64" alt="icon">
+    <div>
+      <h1>Receipt Splitter</h1>
+      <p>Scrape Sam's Club receipts and export item splits to CSV or Google Sheets.</p>
+    </div>
+  </header>
+
+  <section>
+    <h2>Install (developer)</h2>
+    <ol>
+      <li>Clone or download this repo to your machine.</li>
+      <li>Open Chrome → `chrome://extensions` → enable Developer mode → "Load unpacked".</li>
+      <li>Select the `extension/` folder from this repo.</li>
+      <li>Open a Sam's Club order/cart page and click the extension icon. Click "Scrape" then export.</li>
+    </ol>
+    <p><strong>Export options:</strong> CSV (no auth), or append to Google Sheets (requires OAuth setup — see below).</p>
+  </section>
+
+  <section>
+    <h2>Google Sheets setup</h2>
+    <ol>
+      <li>Create a Google Cloud Project and enable the Google Sheets API.</li>
+      <li>Configure OAuth consent screen (External or Internal) and create OAuth 2.0 Client ID.</li>
+      <li>If using `chrome.identity.getAuthToken`, you don't need to add redirect URIs if you use the built-in flow — follow Chrome extension OAuth docs.</li>
+      <li>Copy your spreadsheet ID into <code>extension/background.js</code> replacing <code>YOUR_SPREADSHEET_ID</code>.</li>
+      <li>In the extension, the first Sheets export will ask you to sign in and allow scopes.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Download</h2>
+    <p>After you create a GitHub repo and push this code, you can create a release ZIP and link it here.</p>
+    <p><em>Tip:</em> In the repo, create a GitHub release containing a ZIP of the `extension/` folder so users can download it.</p>
+  </section>
+
+  <footer style="margin-top:32px;color:#666">
+    <p>Want me to create a ready-to-push GitHub repo structure or tweak DOM selectors for your exact Sam's Club page? Paste the page HTML or the URL and I’ll adapt the scraper selectors.</p>
+  </footer>
+</body>
+</html>

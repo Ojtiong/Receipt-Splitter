@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Receipt Splitter</title>
+  <style>
+    body { font-family: Arial, sans-serif; width: 520px; padding: 12px; }
+    .item { border-bottom: 1px solid #eee; padding: 8px 0; }
+    .small { font-size: 0.9em; color: #555; }
+    table { width:100%; border-collapse: collapse; margin-top:8px; }
+    td, th { padding:6px; border-bottom:1px solid #ddd; text-align:left; }
+    .controls { margin-top: 10px; display:flex; gap:8px; flex-wrap:wrap; }
+    button { padding:6px 10px; cursor:pointer; }
+    input[type="text"], input[type="number"] { padding:6px; }
+  </style>
+</head>
+<body>
+  <h3>Receipt Splitter</h3>
+  <div>
+    <label>Participants (comma-separated):</label><br/>
+    <input id="participants" placeholder="Alice,Bob,Charlie" style="width:100%"/>
+  </div>
+  <div style="margin-top:8px;">
+    <button id="scrape">Scrape Sam's Club page</button>
+    <button id="loadSaved">Load saved participants</button>
+    <button id="saveParticipants">Save participants</button>
+  </div>
+
+  <div id="itemsContainer"></div>
+
+  <div class="controls">
+    <button id="exportCsv">Export CSV</button>
+    <button id="exportSheets">Append → Google Sheets</button>
+  </div>
+
+  <div id="status" class="small" style="margin-top:8px;"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
