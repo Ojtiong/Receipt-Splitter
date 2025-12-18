@@ -8,9 +8,16 @@
     return Number.isFinite(n) ? n : 0;
   }
 
+  // Select the item tiles (your existing selector)
   const tiles = Array.from(document.querySelectorAll('div[data-testid="itemtile-stack"]'));
 
   const items = tiles.map(tile => {
+    // Defensive: get plain text of the whole tile for quick checks (lowercase)
+    const tileText = (tile.innerText || "").toLowerCase();
+
+    // Skip entire tile if it clearly shows "canceled"
+    if (tileText.includes("canceled")) return null;
+
     const name = tile.querySelector('[data-testid="productName"] span')
       ?.textContent.trim() || "";
 
@@ -44,7 +51,9 @@
       unitPrice,
       linePrice
     };
-  }).filter(it => it.name);
+  })
+  // Remove nulls caused by skipped tiles and remove items with no name or zero linePrice
+  .filter(it => it && it.name && Number(it.linePrice) > 0);
 
   return items;
 })();

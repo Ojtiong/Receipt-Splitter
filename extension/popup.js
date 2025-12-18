@@ -66,7 +66,8 @@ scrapeBtn.addEventListener('click', async () => {
       linePrice: Number.isFinite(it.linePrice) ? Number(it.linePrice) : (Number.isFinite(it.unitPrice) ? Number(it.unitPrice) : (Number.isFinite(it.price) ? Number(it.price) : 0)),
       assigned: Array.isArray(it.assigned) ? it.assigned : (typeof it.assigned === 'string' && it.assigned.length ? it.assigned.split(';').map(s=>s.trim()).filter(Boolean) : []),
       splitCount: (it.splitCount && it.splitCount > 0) ? it.splitCount : 1
-    })).filter(i => i.name);
+    }))
+    .filter(i => i.name && Number(i.linePrice) > 0);
 
     renderItems();
     setStatus(`Scraped ${items.length} items`);
