@@ -1,3 +1,6 @@
+// Replace your URL here
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyrvZFbQeV3SWlqny6f7yH4CqbjYH_AZY9TOpFwiF0msu2JoA_na4URrXVnKEUlzGlU/exec";
+
 // UI elements
 const scrapeBtn = document.getElementById('scrape');
 const itemsContainer = document.getElementById('itemsContainer');
@@ -209,18 +212,33 @@ exportCsvBtn.addEventListener('click', () => {
 });
 
 // Sheets export: send the 2D values to background as `appendValues`
-exportSheetsBtn.addEventListener('click', () => {
-  const titleRow = null; // or e.g. `Sams club ${new Date().toLocaleDateString()}`
-  const rows = buildExportRows(titleRow); // array of arrays
-  chrome.runtime.sendMessage({ action: 'appendValues', values: rows }, resp => {
-    if (chrome.runtime.lastError) {
-      console.error(chrome.runtime.lastError);
-      setStatus('Sheets export failed: ' + chrome.runtime.lastError.message);
-      return;
-    }
-    if (resp && resp.ok) setStatus('Appended to Google Sheet');
-    else setStatus('Sheets append failed: ' + (resp && resp.error ? resp.error : 'unknown'));
-  });
+// Replace the existing exportSheetsBtn listener with this:
+exportSheetsBtn.addEventListener('click', async () => {
+  if (items.length === 0) {
+    setStatus('No items to export');
+    return;
+  }
+
+  const rows = buildExportRows(null);
+  setStatus('Sending to Sheets...');
+
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors", // Necessary for Google Apps Script redirects
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ values: rows })
+    });
+    // console.log("Status of apps script url:", response.text);
+    // Note: With no-cors, we can't read the response body, 
+    // but the data will arrive in the sheet.
+    setStatus('Check your Google Sheet!');
+  } catch (err) {
+    console.error('Sheets error', err);
+    setStatus('Sheets export failed');
+  }
 });
 
 // On load: try to load saved participants automatically

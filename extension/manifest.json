@@ -4,7 +4,11 @@
   "version": "1.0.0",
   "description": "Scrape Sam's Club receipts/cart and export items to Google Sheets or CSV to split bills.",
   "permissions": ["storage", "activeTab", "scripting", "identity"],
-  "host_permissions": ["https://www.samsclub.com/*"],
+  "host_permissions": [
+    "https://www.samsclub.com/*",
+    "https://script.google.com/*",
+    "https://script.googleusercontent.com/*"
+    ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
