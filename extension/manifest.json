@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Receipt Splitter - Sam's Club",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Scrape Sam's Club receipts/cart and export items to Google Sheets or CSV to split bills.",
   "permissions": ["storage", "activeTab", "scripting", "identity"],
   "host_permissions": [
