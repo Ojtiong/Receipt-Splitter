@@ -67,10 +67,10 @@ scrapeBtn.addEventListener('click', async () => {
       qty: Number.isFinite(it.qty) ? it.qty : (Number.isFinite(it.quantity) ? it.quantity : 1),
       unitPrice: Number.isFinite(it.unitPrice) ? Number(it.unitPrice) : (Number.isFinite(it.price) ? Number(it.price) : 0),
       linePrice: Number.isFinite(it.linePrice) ? Number(it.linePrice) : (Number.isFinite(it.unitPrice) ? Number(it.unitPrice) : (Number.isFinite(it.price) ? Number(it.price) : 0)),
-      assigned: Array.isArray(it.assigned) ? it.assigned : (typeof it.assigned === 'string' && it.assigned.length ? it.assigned.split(';').map(s=>s.trim()).filter(Boolean) : []),
+      assigned: Array.isArray(it.assigned) ? it.assigned : (typeof it.assigned === 'string' && it.assigned.length ? it.assigned.split(';').map(s => s.trim()).filter(Boolean) : []),
       splitCount: (it.splitCount && it.splitCount > 0) ? it.splitCount : 1
     }))
-    .filter(i => i.name && Number(i.linePrice) > 0);
+      .filter(i => i.name && Number(i.linePrice) > 0);
 
     renderItems();
     setStatus(`Scraped ${items.length} items`);
@@ -110,13 +110,13 @@ function renderItems() {
               <span>${escapeHtml(it.name)}</span>
             </td>
             <td style="text-align:center">${it.qty}</td>
-            <td style="text-align:right;padding-right:8px">$${(it.unitPrice||0).toFixed(2)}</td>
-            <td style="text-align:right;padding-right:8px">$${(it.linePrice||it.unitPrice||0).toFixed(2)}</td>
+            <td style="text-align:right;padding-right:8px">$${(it.unitPrice || 0).toFixed(2)}</td>
+            <td style="text-align:right;padding-right:8px">$${(it.linePrice || it.unitPrice || 0).toFixed(2)}</td>
             <td>
-              <input data-idx="${idx}" class="assignees" placeholder="e.g. Alice,Bob" value="${(it.assigned||[]).join(',')}" style="width:170px"/>
+              <input data-idx="${idx}" class="assignees" placeholder="e.g. Alice,Bob" value="${(it.assigned || []).join(',')}" style="width:170px"/>
             </td>
             <td style="text-align:center">
-              <input type="number" min="1" value="${it.splitCount||1}" data-idx="${idx}" class="splitCount" style="width:60px"/>
+              <input type="number" min="1" value="${it.splitCount || 1}" data-idx="${idx}" class="splitCount" style="width:60px"/>
             </td>
           </tr>`).join('')}
       </tbody>
@@ -142,7 +142,7 @@ function renderItems() {
 
 // Simple HTML-escape
 function escapeHtml(s) {
-  return (s||'').toString().replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  return (s || '').toString().replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 // Build export rows matching your sheet layout:
@@ -198,7 +198,7 @@ function buildExportRows(titleRow = null) {
 // CSV export (matching sheet format)
 exportCsvBtn.addEventListener('click', () => {
   const rows = buildExportRows();
-  const csvStr = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const csvStr = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
   const blob = new Blob([csvStr], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -223,13 +223,23 @@ exportSheetsBtn.addEventListener('click', async () => {
   setStatus('Sending to Sheets...');
 
   try {
+    // const response = await fetch(APPS_SCRIPT_URL, {
+    //   method: "POST",
+    //   headers: {
+    //     "Content-Type": "application/json",
+    //   },
+    //   body: JSON.stringify({ values: rows })
+    // });
     const response = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
       mode: "no-cors", // Necessary for Google Apps Script redirects
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ values: rows })
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        date: new Date().toISOString().slice(0, 10),
+        store: 'Sam\'s Club',
+        items: items.map(it => it.name),
+        total: rows[rows.length - 1][1] // or compute total
+      })
     });
     // console.log("Status of apps script url:", response.text);
     // Note: With no-cors, we can't read the response body, 
