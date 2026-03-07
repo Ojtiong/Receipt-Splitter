@@ -3,6 +3,23 @@
 //  - { action: 'appendValues', values: [ [col1, col2, ...], ... ] }  => appends directly
 //  - { action: 'appendToSheet', rows: [...] }  => legacy object handler (kept for compatibility)
 
+/* 
+In manifest.json:
+
+"background": {
+  "service_worker": "background.js"
+}
+
+⚠️ Service workers cannot import via <script> like popup.html.
+
+So in background.js, you must use:
+
+importScripts("config.js");
+
+Then CONFIG becomes available.
+*/
+
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResp) => {
   if (msg.action === 'appendValues') {
     const values = msg.values || [];

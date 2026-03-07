@@ -1,5 +1,9 @@
 // Replace your URL here
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyrvZFbQeV3SWlqny6f7yH4CqbjYH_AZY9TOpFwiF0msu2JoA_na4URrXVnKEUlzGlU/exec";
+const { APPS_SCRIPT_URL, DEBUG, NO_CORS, STORE_NAME } = CONFIG;
+
+if (DEBUG) {
+  console.log("Debug mode enabled");
+}
 
 // UI elements
 const scrapeBtn = document.getElementById('scrape');
@@ -129,15 +133,16 @@ function renderItems() {
       const idx = +e.target.dataset.idx;
       if (!Number.isFinite(idx) || !items[idx]) return;
       items[idx].assigned = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+      const _splitCount = items[idx].assigned.length;
+      items[idx].splitCount = Math.max(1, _splitCount);
     });
   });
-  Array.from(document.querySelectorAll('.splitCount')).forEach(el => {
-    el.addEventListener('change', e => {
-      const idx = +e.target.dataset.idx;
-      if (!Number.isFinite(idx) || !items[idx]) return;
-      items[idx].splitCount = Math.max(1, parseInt(e.target.value) || 1);
-    });
-  });
+  // Array.from(document.querySelectorAll('.splitCount')).forEach(el => {
+  //   el.addEventListener('change', e => {
+  //     const idx = +e.target.dataset.idx;
+  //     if (!Number.isFinite(idx) || !items[idx]) return;
+  //   });
+  // });
 }
 
 // Simple HTML-escape
@@ -150,6 +155,11 @@ function escapeHtml(s) {
 // Rows: [name, totalPrice, qty, amtForP1, amtForP2, ...]
 // Final totals row: ['total', totalPrice, '', totalPerP1, totalPerP2,...]
 function buildExportRows(titleRow = null) {
+
+  // capture a stack trace and timestamp at function entry
+  const entryStack = (new Error('buildExportRows stack')).stack;
+  const entryTs = new Date().toISOString();
+
   const participants = participantsInput.value.split(',').map(s => s.trim()).filter(Boolean);
   const header = ['Item', 'Price', 'Count', ...participants];
 
@@ -163,6 +173,16 @@ function buildExportRows(titleRow = null) {
 
   let totalPrice = 0;
   const perPersonTotals = participants.map(() => 0);
+
+  // snapshot of items for debug
+  const itemsSnapshot = items.map(it => ({
+    name: it.name,
+    qty: it.qty,
+    unitPrice: it.unitPrice,
+    linePrice: it.linePrice,
+    assigned: Array.isArray(it.assigned) ? [...it.assigned] : (typeof it.assigned === 'string' ? it.assigned.split(',').map(s=>s.trim()).filter(Boolean) : []),
+    splitCount: it.splitCount
+  }));
 
   for (const it of items) {
     const name = it.name || '';
@@ -192,6 +212,35 @@ function buildExportRows(titleRow = null) {
   const totalsRow = ['total', totalPrice.toFixed(2), '', ...perPersonTotals.map(a => a.toFixed(2))];
   rows.push(totalsRow);
 
+  // Build debug object and stash it globally for inspection by other code (e.g. the sender)
+  const debug = {
+    timestamp: entryTs,
+    entryStack,
+    itemsCount: items.length,
+    itemsSnapshot,
+    participants,
+    header,
+    totalRows: rows.length,
+    totalPrice: Number(totalPrice.toFixed(2)),
+    perPersonTotals,
+  };
+
+  // expose for later use (inspected/attached by export function)
+  try {
+    window.__LAST_EXPORT_DEBUG = debug;
+  } catch (e) {
+    // ignore (e.g. CSP or environments where window not available)
+    if (DEBUG) console.warn('Could not set window.__LAST_EXPORT_DEBUG', e);
+  }
+
+  if (DEBUG) {
+    console.groupCollapsed('buildExportRows debug');
+    console.log('buildExportRows debug object:', debug);
+    console.table(rows.slice(0, 10)); // small preview of the first 10 rows
+    console.log('Total rows:', rows.length);
+    console.groupEnd();
+  }
+
   return rows;
 }
 
@@ -211,43 +260,107 @@ exportCsvBtn.addEventListener('click', () => {
   setStatus('CSV exported');
 });
 
-// Sheets export: send the 2D values to background as `appendValues`
-// Replace the existing exportSheetsBtn listener with this:
+// Sheets export: send the 2D values to your Apps Script
 exportSheetsBtn.addEventListener('click', async () => {
+
   if (items.length === 0) {
     setStatus('No items to export');
     return;
   }
 
-  const rows = buildExportRows(null);
+  // Ensure we call buildExportRows so it populates window.__LAST_EXPORT_DEBUG
+  const rows = buildExportRows(null); // header + rows + totals
+
   setStatus('Sending to Sheets...');
 
   try {
-    // const response = await fetch(APPS_SCRIPT_URL, {
-    //   method: "POST",
-    //   headers: {
-    //     "Content-Type": "application/json",
-    //   },
-    //   body: JSON.stringify({ values: rows })
-    // });
-    const response = await fetch(APPS_SCRIPT_URL, {
-      method: "POST",
-      mode: "no-cors", // Necessary for Google Apps Script redirects
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    // Compose basic payload
+    const payload = {
+      values: rows,
+      meta: {
         date: new Date().toISOString().slice(0, 10),
-        store: 'Sam\'s Club',
-        items: items.map(it => it.name),
-        total: rows[rows.length - 1][1] // or compute total
-      })
-    });
-    // console.log("Status of apps script url:", response.text);
-    // Note: With no-cors, we can't read the response body, 
-    // but the data will arrive in the sheet.
-    setStatus('Check your Google Sheet!');
+        store: (typeof CONFIG !== 'undefined' && CONFIG.STORE && CONFIG.STORE_NAME) ? CONFIG.STORE_NAME : "Sam's Club"
+      }
+    };
+
+    // Add debug info (stolen from buildExportRows) and add a send-time stack
+    const sendStack = (new Error('exportSheets send stack')).stack;
+    const sendTs = new Date().toISOString();
+    const lastBuildDebug = (typeof window !== 'undefined' && window.__LAST_EXPORT_DEBUG) ? window.__LAST_EXPORT_DEBUG : null;
+
+    payload.meta.debug = {
+      sendTimestamp: sendTs,
+      sendStack,
+      buildExportRowsDebug: lastBuildDebug,
+      itemsCount: items.length,
+      // include a compact items snapshot to help debugging size/shape
+      itemsSnapshotSmall: items.slice(0, 20).map(it => ({
+        name: it.name,
+        qty: it.qty,
+        unitPrice: it.unitPrice,
+        linePrice: it.linePrice,
+        assigned: it.assigned,
+        splitCount: it.splitCount
+      })),
+      rowsCount: rows.length
+    };
+
+    if (DEBUG) {
+      // Print payload in an easy-to-scan way
+      console.groupCollapsed('%cExport -> Apps Script payload (DEBUG)', 'color: white; background: #444; padding: 2px 6px; border-radius: 3px;');
+      console.log('payload.meta:', payload.meta);
+      console.log('values (first 12 rows):', payload.values.slice(0, 12));
+      if (payload.values.length > 12) console.log(`...and ${payload.values.length - 12} more rows`);
+      console.log('full payload object:', payload);
+      console.trace('Export triggered from here');
+      console.groupEnd();
+    }
+    console.log('About to fetch:', CONFIG.APPS_SCRIPT_URL);
+    // Send to Apps Script
+    // NOTE: you currently use mode: "no-cors" in popup.js; if you keep it,
+    // the response will be opaque and you cannot read response.json().
+    // Keep the same behavior here.
+    let response;
+    if (NO_CORS == true) {
+      console.log('Fetching with NO_CORS:');
+      response = await fetch((typeof CONFIG !== 'undefined' && CONFIG.APPS_SCRIPT_URL) ? CONFIG.APPS_SCRIPT_URL : APPS_SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: {
+          "Content-Type": "text/plain"
+        },
+        body: JSON.stringify(payload),
+        redirect: "manual"
+      });
+    }
+    else {
+      console.log('Fetching with CORS:');
+      response = await fetch((typeof CONFIG !== 'undefined' && CONFIG.APPS_SCRIPT_URL) ? CONFIG.APPS_SCRIPT_URL : APPS_SCRIPT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) {
+        throw new Error(`Server responded ${response.status}`);
+      }
+    }
+    // If you later remove no-cors and enable CORS on the Apps Script side:
+    const text = await response.text();
+    console.log('Apps Script raw response:', text);
+
+    setStatus('Sent — check your Google Sheet!');
   } catch (err) {
     console.error('Sheets error', err);
     setStatus('Sheets export failed');
+
+    if (DEBUG) {
+      console.groupCollapsed('exportSheets error debug');
+      console.error(err);
+      try { console.log('window.__LAST_EXPORT_DEBUG', window.__LAST_EXPORT_DEBUG); } catch (e) {}
+      console.groupEnd();
+    }
   }
 });
 
